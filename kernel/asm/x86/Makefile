@@ -3,10 +3,13 @@ ASM_OBJ_X86=mpboot.o
 ASM_ELF_X86=mpboot.elf
 ASM_IMG_X86=mpboot.img
 
+GCC ?= gcc
+LD ?= ld
+
 all: $(ASM_IMG_X86)
 
 $(ASM_OBJ_X86): $(ASM_FILE_X86)
-	gcc -m32 -fno-pie -nostdlib -c $< -o $@
+	$(GCC) -m32 -fno-pie -nostdlib -c $< -o $@
 
 # See kernel::arch::x86_64::kernel_main::NON_PRIMARY_START
 $(ASM_ELF_X86): $(ASM_OBJ_X86)

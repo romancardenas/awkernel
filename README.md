@@ -120,6 +120,23 @@ Debug build.
 $ make x86_64
 ```
 
+#### Developing for x86_64 on macOS
+
+`kernel/asm/x86/mpboot.S` mixes 16/32/64-bit code and needs a real GNU assembler and linker.
+By default, Apple systems provide an alias so `gcc` points to `clang`.
+Also, modern Apple Silicon processors are aarch64.
+Therefore, we must install a GNU x86_64 ELF cross toolchain:
+
+```text
+$ brew install x86_64-elf-gcc x86_64-elf-binutils
+```
+
+Then, when building your application, point to these specific compiler and linker:
+
+```text
+$ make x86_64 RELEASE=1 GCC=x86_64-elf-gcc LD=x86_64-elf-ld
+```
+
 ### Boot
 
 Qemu 8.x or later is required.
