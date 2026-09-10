@@ -18,6 +18,10 @@ path = "../applications/awkernel_services"
 path = "../applications/autoware"
 optional = true
 
+[dependencies.my_app]
+path = "../applications/my_app"
+optional = true
+
 [dependencies.rd_gen_to_dags]
 path = "../applications/rd_gen_to_dags"
 optional = true
@@ -87,6 +91,7 @@ default = []
 perf = ["awkernel_services/perf"]
 
 # Evaluation applications
+my_app = ["dep:my_app"]
 rd_gen_to_dags = ["dep:rd_gen_to_dags"]
 autoware = ["dep:autoware"]
 

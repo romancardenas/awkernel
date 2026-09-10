@@ -10,6 +10,9 @@ pub async fn main() -> Result<(), Cow<'static, str>> {
     #[cfg(feature = "autoware")]
     autoware::run().await; // run the autoware application
 
+    #[cfg(feature = "my_app")]
+    my_app::run().await; // run the my_app application
+
     #[cfg(feature = "rd_gen_to_dags")]
     rd_gen_to_dags::run().await; // run the rd_gen_to_dags application
 

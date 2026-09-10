@@ -13,6 +13,7 @@ members = [
     "awkernel_drivers",
     "applications/awkernel_services",
     "applications/awkernel_shell",
+    "applications/my_app",
     "applications/awkernel_display",
     "applications/autoware",
     "applications/rd_gen_to_dags",
