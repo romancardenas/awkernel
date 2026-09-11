@@ -1,7 +1,7 @@
 pub(super) mod address;
 pub mod barrier;
 pub(super) mod cpu;
-pub(super) mod delay;
+// pub(super) mod delay;
 pub(super) mod dvfs;
 pub(super) mod frame_allocator;
 pub(super) mod interrupt;
@@ -39,4 +39,9 @@ pub fn translate_kernel_address(vpn: address::VirtPageNum) -> Option<page_table:
     } else {
         None
     }
+}
+
+pub(super) fn plic_get_context_id() -> u16 {
+    // TODO: review
+    crate::cpu::cpu_id() as _
 }

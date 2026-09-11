@@ -4,6 +4,9 @@ pub mod aarch64;
 #[cfg(all(feature = "x86", not(feature = "std")))]
 pub mod x86_64;
 
+#[cfg(any(feature = "rv32", feature = "rv64"))]
+pub mod rv_common;
+
 #[cfg(all(feature = "rv32", not(feature = "std")))]
 pub mod rv32;
 
