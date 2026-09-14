@@ -23,7 +23,7 @@ impl Plic {
     ///
     /// # Safety
     ///
-    /// The caller must ensure that the base address is valid and that the PLIC is properly initialized.
+    /// The caller must ensure that all the parameters are valid.
     pub const unsafe fn new(
         base_addr: usize,
         max_priority: u32,
@@ -79,6 +79,7 @@ impl Plic {
     pub fn set_priority(&self, source: u16, priority: u32) {
         if self.source_in_range(source) && self.priority_in_range(priority) {
             let reg = self.priority_reg(source);
+            // Safety: source and priority are in range
             unsafe { core::ptr::write_volatile(reg, priority) };
         }
     }
@@ -92,6 +93,7 @@ impl Plic {
         if self.context_in_range(context_id) && self.source_in_range(source) {
             let enables_reg = self.enable_reg(context_id, source);
             let mask = 1 << (source % 32);
+            // Safety: context and source are in range
             unsafe {
                 let current = core::ptr::read_volatile(enables_reg);
                 core::ptr::write_volatile(enables_reg, current | mask);

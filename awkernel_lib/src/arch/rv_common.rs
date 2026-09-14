@@ -5,13 +5,20 @@ use riscv::{
 };
 
 #[cfg(feature = "rv32")]
+use super::rv32::RV32 as ArchImpl;
+#[cfg(feature = "rv64")]
+use super::rv64::RV64 as ArchImpl;
+
+#[cfg(feature = "rv32")]
 use super::rv32::plic_get_context_id;
 #[cfg(feature = "rv64")]
 use super::rv64::plic_get_context_id;
 
 pub mod clint;
-pub(super) mod delay;
 pub mod plic;
+
+pub(super) mod delay;
+pub(super) mod interrupt;
 
 // TODO: get info from device tree
 pub(super) static INTERRUPT_CONTROLLER: RiscvInterruptController = RiscvInterruptController {

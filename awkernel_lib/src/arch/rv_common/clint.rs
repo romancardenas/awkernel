@@ -52,16 +52,20 @@ impl Clint {
         unsafe { core::ptr::write_volatile(self.msip(hart_id), 1) };
     }
 
+    #[inline]
     pub fn soft_interrupt_broadcast(&self) {
         for hart_id in 0..=num_cpu() {
+            // Safety: hart_id is withing the range of available harts
             unsafe { self.soft_interrupt(hart_id) };
         }
     }
 
+    #[inline]
     pub fn soft_interrupt_broadcast_without_self(&self) {
         let self_hart_id = mhartid::read();
         for hart_id in 0..=num_cpu() {
             if hart_id != self_hart_id {
+                // Safety: hart_id is withing the range of available harts
                 unsafe { self.soft_interrupt(hart_id) };
             }
         }
