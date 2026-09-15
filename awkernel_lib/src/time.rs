@@ -23,7 +23,7 @@
 /// log::info!("Elapsed: {} [ms]", diff.as_millis());
 /// ```
 use core::{
-    ops::{Add, AddAssign},
+    ops::{Add, AddAssign, Sub, SubAssign},
     time::Duration,
 };
 
@@ -113,5 +113,32 @@ impl Add<Duration> for Time {
 impl AddAssign<Duration> for Time {
     fn add_assign(&mut self, dur: Duration) {
         self.uptime += dur.as_nanos();
+    }
+}
+
+impl Sub<Duration> for Time {
+    type Output = Time;
+
+    fn sub(self, other: Duration) -> Self {
+        Self {
+            uptime: self
+                .uptime
+                .checked_sub(other.as_nanos())
+                .expect("overflow when subtracting duration from instant"),
+        }
+    }
+}
+
+impl SubAssign<Duration> for Time {
+    fn sub_assign(&mut self, other: Duration) {
+        *self = *self - other;
+    }
+}
+
+impl Sub<Time> for Time {
+    type Output = Duration;
+
+    fn sub(self, other: Time) -> Duration {
+        self.saturating_duration_since(other)
     }
 }

@@ -46,6 +46,7 @@ pub use futures::select_biased;
 pub use awkernel_lib::{
     cpu::cpu_id,
     delay::{cpu_counter, uptime, uptime_nano},
+    time::Time,
 };
 
 use pubsub::{
@@ -126,6 +127,24 @@ pub trait Cancel: Future + Unpin {
 /// ```
 pub async fn sleep(duration: Duration) -> sleep_task::State {
     sleep_task::Sleep::new(duration).await
+}
+
+/// Sleep until `next`.
+/// Useful for periodic tasks that need to sleep until a specific time, rather than for a specific duration.
+///
+/// # Example
+///
+/// ```
+/// use awkernel_async_lib::{sleep_until, time::Time};
+/// let _ = async {
+///     // Sleep until a specific time.
+///     let next = Time::now() + core::time::Duration::from_secs(1);
+///     // Do some work here...
+///     sleep_until(next).await; // ... then sleep until the next time.
+/// };
+/// ```
+pub async fn sleep_until(next: Time) -> sleep_task::State {
+    sleep(next - Time::now()).await
 }
 
 /// Yield the CPU to the next executable task.
