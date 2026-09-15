@@ -5,6 +5,9 @@ edition = "2024"
 
 [dependencies]
 log = "0.4"
+xdevs-no-std = { git = "https://github.com/iscar-ucm/xdevs_no_std.rs.git", branch = "main", features = [
+    "alloc",
+] }
 
 [dependencies.awkernel_lib]
 path = "../../awkernel_lib"

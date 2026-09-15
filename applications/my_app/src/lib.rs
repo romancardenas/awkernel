@@ -5,6 +5,8 @@ extern crate alloc;
 use awkernel_async_lib::{dag::finish_create_dags, scheduler::SchedulerType, sleep, spawn};
 
 mod complex_dag;
+mod devs_model;
+mod xdevs_driver;
 
 pub async fn run() {
     log::set_max_level(log::LevelFilter::Trace);
@@ -18,6 +20,12 @@ pub async fn run() {
     spawn(
         "periodic_task".into(),
         periodic_task(),
+        SchedulerType::GEDF(1500),
+    )
+    .await;
+    spawn(
+        "my_app_devs_model".into(),
+        devs_model::run_devs_model(),
         SchedulerType::GEDF(1500),
     )
     .await;
