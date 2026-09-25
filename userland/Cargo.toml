@@ -84,7 +84,6 @@ optional = true
 
 [features]
 default = []
-raspi = ["awkernel_services/raspi"]
 perf = ["awkernel_services/perf"]
 
 # Evaluation applications

@@ -86,3 +86,13 @@ impl Default for PowerManagement {
         Self::new()
     }
 }
+
+#[export_name = "__awkernel_reboot"]
+extern "Rust" fn raspi_reboot() -> ! {
+    PowerManagement::default().reboot()
+}
+
+#[export_name = "__awkernel_shutdown"]
+extern "Rust" fn raspi_shutdown() -> ! {
+    PowerManagement::default().shutdown()
+}

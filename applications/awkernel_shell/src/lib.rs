@@ -268,43 +268,12 @@ fn netdump_ffi(interface_id: BigInt) {
 
 #[embedded]
 fn reboot_ffi() {
-    #[cfg(all(target_arch = "x86_64", target_os = "none"))]
-    {
-        awkernel_lib::arch::x86_64::power::reboot();
-    }
-
-    #[cfg(all(target_arch = "aarch64", target_os = "none", feature = "raspi"))]
-    {
-        awkernel_drivers::hal::raspi::power::PowerManagement::default().reboot();
-    }
-
-    #[cfg(not(any(
-        all(target_arch = "x86_64", target_os = "none"),
-        all(target_arch = "aarch64", target_os = "none", feature = "raspi")
-    )))]
-    {
-        console::print("reboot is unsupported on this architecture\r\n");
-    }
+    awkernel_lib::power::reboot();
 }
 
 #[embedded]
 fn shutdown_ffi() {
-    #[cfg(all(target_arch = "x86_64", target_os = "none"))]
-    {
-        awkernel_lib::arch::x86_64::power::shutdown();
-    }
-    #[cfg(all(target_arch = "aarch64", target_os = "none", feature = "raspi"))]
-    {
-        awkernel_drivers::hal::raspi::power::PowerManagement::default().shutdown();
-    }
-
-    #[cfg(not(any(
-        all(target_arch = "x86_64", target_os = "none"),
-        all(target_arch = "aarch64", target_os = "none", feature = "raspi")
-    )))]
-    {
-        console::print("shutdown is unsupported on this architecture\r\n");
-    }
+    awkernel_lib::power::shutdown();
 }
 
 #[cfg(feature = "perf")]

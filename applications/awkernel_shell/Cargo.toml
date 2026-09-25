@@ -20,10 +20,5 @@ default-features = false
 path = "../../awkernel_lib"
 default-features = false
 
-[dependencies.awkernel_drivers]
-path = "../../awkernel_drivers"
-default-features = false
-
 [features]
 perf = []
-raspi = ["awkernel_drivers/raspi"]

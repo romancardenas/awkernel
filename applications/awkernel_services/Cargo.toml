@@ -25,4 +25,3 @@ path = "../awkernel_display"
 
 [features]
 perf = ["awkernel_shell/perf"]
-raspi = ["awkernel_shell/raspi"]
