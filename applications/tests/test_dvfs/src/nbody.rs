@@ -26,7 +26,7 @@ fn compute_force(a: &Body, b: &Body, g: f64, eps: f64) -> (f64, f64) {
     let dx = b.x - a.x;
     let dy = b.y - a.y;
     let dist_sq = dx * dx + dy * dy + eps * eps; // softening
-    let dist = dist_sq.sqrt();
+    let dist = <f64 as Float>::sqrt(dist_sq); // otherwise, in std use f64::sqrt(dist_sq) and clippy complains
     let f = g * a.mass * b.mass / dist_sq;
     let fx = f * dx / dist;
     let fy = f * dy / dist;

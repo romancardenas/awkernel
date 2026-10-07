@@ -54,7 +54,7 @@ union CPUVendorData {
 }
 
 pub fn get_cpu_vendor() -> Option<CPUVendor> {
-    let cpuid = unsafe { core::arch::x86_64::__cpuid(0) };
+    let cpuid = core::arch::x86_64::__cpuid(0);
     let cpuid = CPUId {
         ebx: cpuid.ebx,
         edx: cpuid.edx,
