@@ -4,8 +4,9 @@ use ::acpi::AcpiTables;
 pub mod acpi;
 pub mod barrier;
 pub mod cpu;
+pub mod cpuid;
 pub mod delay;
-pub(super) mod dvfs;
+pub mod dvfs;
 pub mod fault;
 pub mod hwp;
 pub(super) mod interrupt;
@@ -34,5 +35,17 @@ pub fn init(
         log::warn!("Failed to initialize x86 power control. {err}");
     }
 
+    if let Err(err) = dvfs::init_primary() {
+        log::warn!("Failed to initialize DVFS on the primary CPU. {err}");
+    }
+
     Ok(())
+}
+
+/// Initialization for each non-primary CPU. Call after the primary CPU finished `init`.
+pub fn init_non_primary() {
+    if let Err(err) = dvfs::init_non_primary() {
+        let cpu = crate::cpu::cpu_id();
+        log::warn!("Failed to initialize DVFS on CPU#{cpu}. {err}");
+    }
 }

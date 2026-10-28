@@ -10,12 +10,25 @@ use core::arch::x86_64::__cpuid;
 
 use x86_64::registers::model_specific::Msr;
 
-use super::msr::{rdmsr_safe, wrmsr_safe};
+use super::cpuid::tpm_info;
+use super::msr::{ia32_pm_enable, rdmsr_safe, wrmsr_safe};
 
 const MSR_IA32_PM_ENABLE: u32 = 0x770;
 const MSR_IA32_HWP_CAPABILITIES: u32 = 0x771;
 const MSR_IA32_HWP_REQUEST: u32 = 0x774;
 const MSR_IA32_APERF: u32 = 0xE8;
+
+pub fn is_supported() -> bool {
+    tpm_info::try_read().map_or(false, |tpm| tpm.hwp())
+}
+
+pub fn is_enabled() -> bool {
+    is_supported() && ia32_pm_enable::hwp_enabled()
+}
+
+pub unsafe fn enable() -> bool {
+    is_supported() && ia32_pm_enable::enable_hwp()
+}
 
 /// `IA32_HWP_CAPABILITIES` of one logical CPU, in HWP performance units.
 #[derive(Debug, Clone, Copy)]

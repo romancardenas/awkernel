@@ -6,6 +6,7 @@ pub enum Error {
     NotSupported,
     InvalidArgument,
     InternalError,
+    FrequencyOutOfRange,
     Other,
 }
 
@@ -17,6 +18,7 @@ impl Error {
             Error::NotSupported => "Not supported",
             Error::InvalidArgument => "Invalid argument",
             Error::InternalError => "Internal error",
+            Error::FrequencyOutOfRange => "Frequency out of range",
             Error::Other => "Other error",
         }
     }
@@ -66,6 +68,26 @@ pub trait Dvfs {
     #[inline(always)]
     fn get_curr_cpu_freq() -> Result<u64> {
         Err(Error::NotImplemented)
+    }
+
+    #[inline(always)]
+    fn set_min_cpu_freq() -> Result<()> {
+        let min_freq = Self::get_min_cpu_freq()?;
+        Self::set_cpu_freq(min_freq)
+    }
+
+    #[inline(always)]
+    fn set_max_cpu_freq() -> Result<()> {
+        let max_freq = Self::get_max_cpu_freq()?;
+        Self::set_cpu_freq(max_freq)
+    }
+
+    #[inline(always)]
+    fn set_cpu_freq_clamped(freq: u64) -> Result<()> {
+        let min_freq = Self::get_min_cpu_freq()?;
+        let max_freq = Self::get_max_cpu_freq()?;
+        let freq = freq.clamp(min_freq, max_freq);
+        Self::set_cpu_freq(freq)
     }
 }
 
