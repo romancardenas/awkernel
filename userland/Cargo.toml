@@ -95,7 +95,7 @@ path = "../applications/tests/test_active_vp"
 optional = true
 
 [features]
-default = ["rd_gen_to_dags"]
+default = ["test_dvfs"]
 perf = ["awkernel_services/perf"]
 
 # Evaluation applications

@@ -88,8 +88,6 @@ no_std_unwinding = ["dep:unwinding"]
 debug = ["dep:gimli", "dep:addr2line"]
 usb_serial = ["awkernel_drivers/xhci"]
 x86 = [
-    "perf",
-    "period-index-propagation",
     "no_std_unwinding",
     "awkernel_lib/x86",
     "dep:x86_64",
