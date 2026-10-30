@@ -170,5 +170,7 @@ smt_disable = []
 # core uses its own level, so hybrid P/E-cores each run at their own base clock.
 # Off by default; no effect on CPUs without HWP (e.g. QEMU).
 fix_freq = []
+# Activates DVFS operation support in the kernel (WIP)
+dvfs = ["awkernel_lib/dvfs"]
 test_dvfs = ["userland/test_dvfs"]
 test_raspi_dvfs = ["userland/test_raspi_dvfs"]

@@ -6,7 +6,7 @@ pub enum Error {
     NotSupported,
     InvalidArgument,
     InternalError,
-    FrequencyOutOfRange,
+    FrequencyOutOfRange { requested: u64, min: u64, max: u64 },
     Other,
 }
 
@@ -18,7 +18,7 @@ impl Error {
             Error::NotSupported => "Not supported",
             Error::InvalidArgument => "Invalid argument",
             Error::InternalError => "Internal error",
-            Error::FrequencyOutOfRange => "Frequency out of range",
+            Error::FrequencyOutOfRange { .. } => "Frequency out of range",
             Error::Other => "Other error",
         }
     }
@@ -26,7 +26,20 @@ impl Error {
 
 impl core::fmt::Display for Error {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        write!(f, "{}", self.description())
+        match self {
+            Error::FrequencyOutOfRange {
+                requested,
+                min,
+                max,
+            } => {
+                write!(
+                    f,
+                    "{}: requested {requested}, min {min}, max {max}",
+                    self.description()
+                )
+            }
+            _ => write!(f, "{}", self.description()),
+        }
     }
 }
 
