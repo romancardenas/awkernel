@@ -691,9 +691,6 @@ fn non_primary_kernel_main() -> ! {
         num_cpu,
     };
 
-    // Leave to the end so startup is faster (no frequency drop)
-    awkernel_lib::arch::x86_64::init_non_primary();
-
     crate::main(kernel_info); // jump to userland
 
     wait_forever();

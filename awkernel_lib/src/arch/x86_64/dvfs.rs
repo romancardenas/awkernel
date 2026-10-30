@@ -1,35 +1,22 @@
 use crate::{
-    delay::wait_millisec,
+    delay::wait_microsec,
     dvfs::{Dvfs, Error, Result},
 };
 
 use super::{
     cpuid::{freq_info, tpm_info},
     hwp,
-    msr::{
-        ia32_hwp_capabilities, ia32_hwp_request, ia32_misc_enable, ia32_perf_aperf, ia32_perf_ctl,
-        ia32_perf_mperf, platform_info,
-    },
+    msr::{ia32_misc_enable, ia32_perf_aperf, ia32_perf_ctl, ia32_perf_mperf, platform_info},
     X86,
 };
 
-/// Tries to enable HWP for the package. Enabling HWP cannot be undone until reset.
+/// Initialize DVFS for the current CPU. It must be called from every CPU.
 ///
-/// # Safety
-///
-/// Call once on the primary CPU before any CPU calls [`init_non_primary`].
-pub unsafe fn init_primary() -> Result<()> {
-    // Safety: This is called on primary CPU during boot
+/// Tries to enable HWP, and if it fails, falls back to Enhanced SpeedStep.
+/// Then, it sets the CPU to its minimum frequency.
+pub fn init() -> Result<()> {
     if unsafe { !hwp::enable() } {
         log::warn!("[DVFS] Failed to enable HWP. Using non-HWP mode.");
-    }
-    init_non_primary()
-}
-
-/// If HWP is not enabled, this will enable Enhanced SpeedStep.
-/// Then, it sets the CPU to its minimum frequency.
-pub fn init_non_primary() -> Result<()> {
-    if !hwp::is_enabled() {
         let mut misc_enable = ia32_misc_enable::try_read().ok_or(Error::NotSupported)?;
         misc_enable.set_enhanced_speedstep_enable(true);
         // Safety: MSR IA32_MISC_ENABLE exists
@@ -38,18 +25,36 @@ pub fn init_non_primary() -> Result<()> {
     X86::set_min_cpu_freq()
 }
 
-/// Round `freq` up to a multiple of the bus clock, so the CPU is never below the request.
-#[inline]
-fn ceil_to_bus_ratio(freq: u64) -> u64 {
-    let bus_hz = freq_info::bus_freq_hz();
-    freq.div_ceil(bus_hz) * bus_hz
-}
+/// Measure this CPU's average frequency over `interval_us`.
+///
+/// This function is blocking: it remains on CPU while the sample is collected.
+pub fn measure_freq_hz(interval_us: u64) -> Result<u64> {
+    if interval_us == 0 {
+        return Err(Error::InvalidArgument);
+    }
+    if !tpm_info::hw_coord_feedback_supported() {
+        return Err(Error::NotSupported);
+    }
+    let base_freq_hz = freq_info::base_freq_hz().ok_or(Error::NotSupported)?;
 
-/// Round `freq` down to a multiple of the bus clock.
-#[inline]
-fn floor_to_bus_ratio(freq: u64) -> u64 {
-    let bus_hz = freq_info::bus_freq_hz();
-    freq / bus_hz * bus_hz
+    // Safety: HW_COORD_FEEDBACK is supported
+    let start_mperf = unsafe { ia32_perf_mperf::read_unchecked() };
+    let start_aperf = unsafe { ia32_perf_aperf::read_unchecked() };
+
+    wait_microsec(interval_us);
+
+    // Safety: HW_COORD_FEEDBACK is supported
+    let end_mperf = unsafe { ia32_perf_mperf::read_unchecked() };
+    let end_aperf = unsafe { ia32_perf_aperf::read_unchecked() };
+
+    let mperf_delta = end_mperf.wrapping_sub(start_mperf);
+    let aperf_delta = end_aperf.wrapping_sub(start_aperf);
+    if mperf_delta == 0 {
+        return Err(Error::InternalError);
+    }
+
+    let freq_hz = (aperf_delta as u128 * base_freq_hz as u128) / mperf_delta as u128;
+    Ok(freq_hz as u64)
 }
 
 impl Dvfs for X86 {
@@ -70,18 +75,7 @@ impl Dvfs for X86 {
 
         // If HWP is enabled, we use IA32_HWP_REQUEST to set the frequency
         if hwp::is_enabled() {
-            // Rounds up, so the CPU is never below the target.
-            let ratio = ia32_hwp_capabilities::hz_to_ratio(freq);
-
-            // Minimum[7:0] = Maximum[15:8] = perf; Desired[23:16] = 0 and EPP[31:24] = 0.
-            let mut request = ia32_hwp_request::Ia32HwpRequest::new(0);
-            request.set_min_perf_ratio(ratio);
-            request.set_max_perf_ratio(ratio);
-
-            // Safety: HWP is enabled, so IA32_HWP_REQUEST exists.
-            unsafe { ia32_hwp_request::write_unchecked(request) };
-
-            return Ok(());
+            return hwp::set_frequency_hz(freq).map_err(|error| error.into());
         }
         // When HWP is not enabled, we try to use IA32_PERF_CTL
         if let Some(mut perf_ctl) = ia32_perf_ctl::try_read() {
@@ -99,12 +93,9 @@ impl Dvfs for X86 {
     fn get_max_cpu_freq() -> Result<u64> {
         // If HWP is enabled, we use IA32_HWP_CAPABILITIES to get the guaranteed performance
         if hwp::is_enabled() {
-            // Safety: HWP is enabled, so IA32_HWP_CAPABILITIES exists.
-            let caps = unsafe { ia32_hwp_capabilities::read_unchecked() };
-            return caps
-                .guaranteed_perf_freq_hz()
+            return hwp::guaranteed_freq_hz()
                 .map(floor_to_bus_ratio)
-                .ok_or(Error::NotSupported);
+                .map_err(|e| e.into());
         }
         // If HWP is not enabled, we try with the CPUID.16H
         if let Some(freq_hz) = freq_info::base_freq_hz() {
@@ -132,31 +123,20 @@ impl Dvfs for X86 {
 
     /// Get the current frequency of the current CPU.
     fn get_curr_cpu_freq() -> Result<u64> {
-        // First we check that MPERF and APERF are supported
-        if !tpm_info::hw_coord_feedback_supported() {
-            return Err(Error::NotSupported);
-        }
-        // MPERF ticks at the package base frequency, not at the per-core maximum.
-        let base_freq_hz = freq_info::base_freq_hz().ok_or(Error::NotSupported)?;
-
-        // Safety: xPERF MSRs exist on CPUs that support HWP and HW feedback.
-        unsafe {
-            ia32_perf_mperf::write_unchecked(0);
-            ia32_perf_aperf::write_unchecked(0);
-        }
-        wait_millisec(10);
-        // Safety: xPERF MSRs exist on CPUs that support HWP and HW feedback.
-        let (mperf_delta, aperf_delta) = unsafe {
-            (
-                ia32_perf_mperf::read_unchecked(),
-                ia32_perf_aperf::read_unchecked(),
-            )
-        };
-        if mperf_delta == 0 {
-            return Err(Error::InternalError);
-        }
-
-        let freq = (aperf_delta as u128 * base_freq_hz as u128) / mperf_delta as u128;
-        Ok(freq as u64)
+        measure_freq_hz(10_000)
     }
+}
+
+/// Round `freq` up to a multiple of the bus clock, so the CPU is never below the request.
+#[inline]
+fn ceil_to_bus_ratio(freq: u64) -> u64 {
+    let bus_hz = freq_info::bus_freq_hz();
+    freq.div_ceil(bus_hz) * bus_hz
+}
+
+/// Round `freq` down to a multiple of the bus clock.
+#[inline]
+fn floor_to_bus_ratio(freq: u64) -> u64 {
+    let bus_hz = freq_info::bus_freq_hz();
+    freq / bus_hz * bus_hz
 }

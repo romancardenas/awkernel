@@ -36,19 +36,5 @@ pub fn init(
         log::warn!("Failed to initialize x86 power control. {err}");
     }
 
-    #[cfg(feature = "dvfs")]
-    if let Err(err) = unsafe { dvfs::init_primary() } {
-        log::warn!("Failed to initialize DVFS on the primary CPU. {err}");
-    }
-
     Ok(())
-}
-
-/// Initialization for each non-primary CPU. Call after the primary CPU finished `init`.
-pub fn init_non_primary() {
-    #[cfg(feature = "dvfs")]
-    if let Err(err) = dvfs::init_non_primary() {
-        let cpu = crate::cpu::cpu_id();
-        log::warn!("Failed to initialize DVFS on CPU#{cpu}. {err}");
-    }
 }

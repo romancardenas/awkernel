@@ -164,23 +164,42 @@ fn main<Info: Debug>(kernel_info: KernelInfo<Info>) {
 /// Pin this CPU's frequency (`fix_freq`), then calibrate `awkernel_lib::busy_work`
 /// on it. Calibration must come after pinning: the rate depends on the clock.
 fn init_cpu_execution_speed(cpu_id: usize) {
-    #[cfg(all(feature = "fix_freq", target_arch = "x86_64", not(feature = "std")))]
+    #[cfg(all(target_arch = "x86_64", not(feature = "std")))]
     {
-        use awkernel_lib::arch::x86_64::hwp;
+        #[cfg(feature = "fix_freq")]
+        {
+            use awkernel_lib::arch::x86_64::dvfs;
+            use awkernel_lib::arch::x86_64::hwp;
 
-        match hwp::pin_to_guaranteed() {
-            Ok(levels) => {
-                // HWP transitions take tens of microseconds; settle before measuring.
-                awkernel_lib::delay::wait_millisec(1);
-                let mhz = hwp::measure_freq_mhz(10_000).unwrap_or(0);
-                log::info!(
-                    "fix_freq: CPU#{cpu_id} pinned to HWP guaranteed={} (lowest={}, highest={}), measured {mhz} MHz",
-                    levels.guaranteed,
-                    levels.lowest,
-                    levels.highest,
-                );
+            match hwp::pin_to_guaranteed() {
+                Ok(levels) => {
+                    // HWP transitions take tens of microseconds; settle before measuring.
+                    awkernel_lib::delay::wait_millisec(1);
+                    match dvfs::measure_freq_hz(10_000) {
+                        Ok(freq_hz) => {
+                            let mhz = freq_hz / 1_000_000;
+                            log::info!(
+                                "fix_freq: CPU#{cpu_id} pinned to HWP guaranteed={} (lowest={}, highest={}), measured {mhz} MHz",
+                                levels.guaranteed,
+                                levels.lowest,
+                                levels.highest,
+                            );
+                        }
+                        Err(err) => log::warn!(
+                            "fix_freq: CPU#{cpu_id} pinned to HWP guaranteed={} but frequency measurement failed: {err}",
+                            levels.guaranteed,
+                        ),
+                    }
+                }
+                Err(e) => log::warn!("fix_freq: CPU#{cpu_id} frequency not pinned: {e:?}"),
             }
-            Err(e) => log::warn!("fix_freq: CPU#{cpu_id} frequency not pinned: {e:?}"),
+        }
+        #[cfg(feature = "dvfs")]
+        {
+            match awkernel_lib::arch::x86_64::dvfs::init() {
+                Ok(_) => log::info!("DVFS initialized on CPU#{cpu_id}"),
+                Err(e) => log::warn!("Failed to initialize DVFS on CPU#{cpu_id}. {e:?}"),
+            }
         }
     }
 
